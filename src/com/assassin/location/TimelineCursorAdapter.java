@@ -4,10 +4,10 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
 
-import com.google.android.gms.maps.model.LatLng;
-
+import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
+import android.database.sqlite.SQLiteDatabase;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.location.Address;
@@ -23,24 +23,23 @@ import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.TextView;
 
+import com.assassin.location.database.LocationDBHelper;
+
 public class TimelineCursorAdapter extends CursorAdapter {
 
 	// private double previousLat, previousLng;
 	private Context context;
 	private Cursor cursor;
 	private LayoutInflater inflater;
+	private String tableName;
 
 	public TimelineCursorAdapter(Context context, Cursor cursor,
-			boolean autoRequery) {
+			boolean autoRequery, String tableName) {
 		super(context, cursor, autoRequery);
 		this.context = context;
 		this.cursor = cursor;
 		inflater = LayoutInflater.from(context);
-		cursor.moveToFirst();
-		/*
-		 * previousLat = cursor.getDouble(2); previousLng = cursor.getDouble(3);
-		 */
-		cursor.move(0);
+		this.tableName = tableName;
 	}
 
 	@Override
@@ -49,24 +48,35 @@ public class TimelineCursorAdapter extends CursorAdapter {
 		TextView txtLocation = (TextView) view.findViewById(R.id.txtLocation);
 		TextView txtTime = (TextView) view.findViewById(R.id.txtTime);
 
-		StringBuilder loc = new StringBuilder(cursor.getString(1) + "\n");
+		StringBuilder loc = new StringBuilder();
+//		if (cursor.moveToNext()) {
+//			loc.append(cursor.getString(1) + " - ");
+//			cursor.moveToPrevious();
+//		}
+		
+		loc.append(cursor.getString(1));
 
 		txtTime.setText(loc);
 		loc.delete(0, loc.length());
-		
-		String address = cursor.getString(4);
+
+		String address = null;
+		try {
+			address = cursor.getString(4);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+
 		double latitude = cursor.getDouble(2);
 		double longitude = cursor.getDouble(3);
 
-		
-		
-		if(address != null){
+		if (address != null && !address.equals("")) {
 			txtLocation.setText(address);
-		}else{
+		} else {
 			Location location = new Location("");
 			location.setLatitude(latitude);
 			location.setLongitude(longitude);
-			new SetAddressTask(txtLocation).execute(location);
+			int id = cursor.getInt(0);
+			new SetAddressTask(txtLocation, id).execute(location);
 		}
 
 		// Toast.makeText(context, "Cursor: \n" + latitude + "\n" + longitude,
@@ -119,13 +129,17 @@ public class TimelineCursorAdapter extends CursorAdapter {
 				.getActiveNetworkInfo();
 		return activeNetworkInfo != null && activeNetworkInfo.isConnected();
 	}
-	
-	class SetAddressTask extends AsyncTask<Location, Void, String>{
-		TextView address ;
-		public SetAddressTask(TextView tv){
+
+	class SetAddressTask extends AsyncTask<Location, Void, String> {
+		TextView address;
+		int id;
+
+		public SetAddressTask(TextView tv, int id) {
 			address = tv;
-			
+			this.id = id;
+
 		}
+
 		@Override
 		protected String doInBackground(Location... params) {
 			Location location = params[0];
@@ -133,8 +147,8 @@ public class TimelineCursorAdapter extends CursorAdapter {
 			String loc = null;
 			try {
 				if (isNetworkAvailable()) {
-					List<Address> addresses = reverse.getFromLocation(location.getLatitude(),
-							location.getLongitude(), 1);
+					List<Address> addresses = reverse.getFromLocation(
+							location.getLatitude(), location.getLongitude(), 1);
 					if (!addresses.isEmpty()) {
 						StringBuilder address = new StringBuilder();
 						for (Address add : addresses) {
@@ -149,16 +163,24 @@ public class TimelineCursorAdapter extends CursorAdapter {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
+
+			LocationDBHelper dbHelper = new LocationDBHelper(context);
+			SQLiteDatabase db = dbHelper.getWritableDatabase();
+			ContentValues cv = new ContentValues();
+			cv.put("address", loc);
+			String[] whereArgs = new String[] { String.valueOf(id) };
+			db.update(tableName, cv, "_id=?", whereArgs);
+
 			return loc;
 		}
+
 		@Override
 		protected void onPostExecute(String result) {
-			if(result != null){
+			if (result != null) {
 				address.setText(result);
 			}
 		}
-		
-		
+
 	}
 
 }

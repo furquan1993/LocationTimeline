@@ -35,8 +35,8 @@ import com.assassin.location.database.LocationDBHelper;
 public class GPSService extends Service {
 
 	public static boolean shouldUpdate = true;
-
-	private final static int updateInterval = 1000 * 60 * 1; // minutes.
+	//private static int time = 3;
+	public static int updateInterval = 1000 * 60 * 3; // minutes.
 	private final static int updateDistance = 1; // meters
 
 	private Location prevLocation;
@@ -67,7 +67,8 @@ public class GPSService extends Service {
 		 * 
 		 * } });
 		 */
-		prevLocation = getLocation();
+		prevLocation = null;
+		getLocation();
 		// uiHandler.post(new PostLocationRunnable(prevLocation, context));
 		return START_STICKY;
 	}
@@ -259,6 +260,10 @@ public class GPSService extends Service {
 	// Check if the location is changed.
 	private boolean withinRadius(double newLat, double newLng, double radius) {
 
+		if(prevLocation == null){
+			return false;
+		}
+		
 		double previousLat = prevLocation.getLatitude();
 		double previousLng = prevLocation.getLongitude();
 
@@ -324,7 +329,6 @@ public class GPSService extends Service {
 
 		@Override
 		public void onLocationChanged(Location location) {
-			
 
 			Calendar today = Calendar.getInstance();
 
@@ -332,7 +336,7 @@ public class GPSService extends Service {
 			// + (today.get(Calendar.MONTH) + 1) + "-"
 			// + today.get(Calendar.DAY_OF_MONTH) + "\'";
 
-			String time = "" + today.get(Calendar.HOUR_OF_DAY) + ":"
+			String time = "" + today.get(Calendar.HOUR) + ":"
 					+ today.get(Calendar.MINUTE) + ":"
 					+ today.get(Calendar.SECOND);
 
@@ -350,7 +354,7 @@ public class GPSService extends Service {
 				new WriteToDatabase().execute(cv);
 
 				prevLocation = location;
-				
+
 				uiHandler.post(new PostLocationRunnable(location, context));
 
 			}

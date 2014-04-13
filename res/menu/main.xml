@@ -4,9 +4,19 @@
     tools:context="com.assassin.location.MainActivity" >
 
     <item
+        android:id="@+id/change_date"
+        android:orderInCategory="100"
+        android:showAsAction="ifRoom"
+        android:title="@string/change_date"/>
+    <item
+        android:id="@+id/update_frequency"
+        android:orderInCategory="102"
+        android:showAsAction="ifRoom"
+        android:title="@string/update_freq_title"/>
+    <item
         android:id="@+id/refresh"
         android:icon="@android:drawable/ic_menu_rotate"
-        android:orderInCategory="100"
+        android:orderInCategory="98"
         android:showAsAction="ifRoom"
         android:title="@string/menu_refresh"/>
     <item

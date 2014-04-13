@@ -7,5 +7,10 @@
     <string name="map_img_desc">Show the static view of location</string>
     <string name="menu_refresh">Refresh</string>
     <string name="clear_record">Clear Record</string>
+    <string name="change_date">Select date</string>
+    <string name="update_freq_title">Change Updating frequency</string>
+    <string name="change_freq_description">Insert the time interval you wnat it to check you location. The time interval is in minutes, so if you want it to update you location in seconds use 0.x like 0.5 for 30 seconds.</string>
+    <string name="set_freq_btn_text">Set frequency</string>
+    <string name="change_freq_title">Change Frequency</string>
 
 </resources>

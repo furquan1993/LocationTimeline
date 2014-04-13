@@ -6,6 +6,7 @@ import java.util.concurrent.ExecutionException;
 import android.app.AlertDialog;
 import android.app.DatePickerDialog;
 import android.app.DatePickerDialog.OnDateSetListener;
+import android.app.Dialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.DialogInterface.OnClickListener;
@@ -19,9 +20,12 @@ import android.os.Bundle;
 import android.support.v7.app.ActionBarActivity;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.View;
 import android.widget.AbsListView;
 import android.widget.AbsListView.OnScrollListener;
+import android.widget.Button;
 import android.widget.DatePicker;
+import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.Toast;
 
@@ -60,11 +64,11 @@ public class MainActivity extends ActionBarActivity {
 		 * lon = new StringBuilder("Longitude\n");
 		 */
 
-		String tableName = "" + today.get(Calendar.YEAR) + "-"
+		String tableName = "\'" + today.get(Calendar.YEAR) + "-"
 				+ (today.get(Calendar.MONTH) + 1) + "-"
-				+ today.get(Calendar.DAY_OF_MONTH);
+				+ today.get(Calendar.DAY_OF_MONTH) + "\'";
 
-		String sql = "SELECT * FROM \'" + tableName + "\'";
+		String sql = "SELECT * FROM " + tableName + "";
 
 		Cursor cursor = null;
 		try {
@@ -86,9 +90,8 @@ public class MainActivity extends ActionBarActivity {
 		 * lon.append(id + " " + cursor.getDouble(3) + "\n"); } }
 		 */
 
-		adapter = new TimelineCursorAdapter(context, cursor, true);
+		adapter = new TimelineCursorAdapter(context, cursor, true, tableName);
 		adapter.notifyDataSetChanged();
-		locationDb.close();
 
 		lvTimeline.setAdapter(adapter);
 		lvTimeline.setSelection(lvTimeline.getAdapter().getCount() - 1);
@@ -148,6 +151,58 @@ public class MainActivity extends ActionBarActivity {
 		// as you specify a parent activity in AndroidManifest.xml.
 		int id = item.getItemId();
 		switch (id) {
+		case R.id.change_date:
+			DatePickerDialog datePicker = new DatePickerDialog(
+					context,
+					new OnDateSetListener() {
+
+						@Override
+						public void onDateSet(DatePicker view, int year,
+								int monthOfYear, int dayOfMonth) {
+							String tableName = "\'" + year + "-"
+									+ (monthOfYear + 1) + "-" + dayOfMonth
+									+ "\'";
+
+							String sql = "SELECT * from " + tableName;
+
+							Cursor cursor = null;
+							try {
+								cursor = new CursorGenerator().execute(
+										"SELECT * FROM sqlite_master WHERE name ="
+												+ tableName
+												+ " and type='table';").get();
+								if (cursor.getCount() > 0) {
+									cursor = new CursorGenerator().execute(sql)
+											.get();
+								} else {
+									cursor.close();
+									cursor = null;
+								}
+							} catch (InterruptedException e) {
+								// TODO Auto-generated catch block
+								e.printStackTrace();
+							} catch (ExecutionException e) {
+								// TODO Auto-generated catch block
+								e.printStackTrace();
+							}
+
+							// SQLiteDatabase db =
+							// dbHelper.getReadableDatabase();
+							// if (cursor == null) {
+							// cursor = db.rawQuery(sql, null);
+							// }
+
+							TimelineCursorAdapter newApdater = new TimelineCursorAdapter(
+									context, cursor, false, tableName);
+							lvTimeline.setAdapter(newApdater);
+							// db.close();
+
+						}
+					}, today.get(Calendar.YEAR), today.get(Calendar.MONTH),
+					today.get(Calendar.DATE));
+
+			datePicker.show();
+			break;
 		case R.id.refresh:
 			refreshView();
 			break;
@@ -165,13 +220,59 @@ public class MainActivity extends ActionBarActivity {
 					dateListener, today.get(Calendar.YEAR),
 					today.get(Calendar.MONTH), today.get(Calendar.DATE));
 
-			
-			
 			dialog.show();
 
 			break;
+
+		case R.id.update_frequency:
+			updateFrequency();
+			break;
 		}
 		return super.onOptionsItemSelected(item);
+	}
+
+	private void updateFrequency() {
+		final Dialog changeFreqDialog = new Dialog(context);
+		changeFreqDialog.setContentView(R.layout.layout_change_freq);
+
+		changeFreqDialog.setTitle(R.string.change_freq_title);
+
+		final EditText freq = (EditText) changeFreqDialog
+				.findViewById(R.id.enter_freq);
+		Button cancel = (Button) changeFreqDialog
+				.findViewById(R.id.freq_cancel_btn);
+		Button setFreq = (Button) changeFreqDialog
+				.findViewById(R.id.set_freq_btn);
+
+		setFreq.setOnClickListener(new View.OnClickListener() {
+
+			@Override
+			public void onClick(View v) {
+				double frequency = Double
+						.parseDouble(freq.getText().toString());
+				changeUpdateFrequency(frequency);
+				
+				
+				Intent gps = new Intent(context, GPSService.class); 
+				stopService(gps);
+				startService(gps);
+				
+			}
+		});
+
+		cancel.setOnClickListener(new View.OnClickListener() {
+
+			@Override
+			public void onClick(View v) {
+				changeFreqDialog.cancel();
+			}
+		});
+
+		changeFreqDialog.show();
+	}
+
+	private void changeUpdateFrequency(double time) {
+		GPSService.updateInterval = (int) (1000 * 60 * time);
 	}
 
 	private void refreshView() {
@@ -218,13 +319,12 @@ public class MainActivity extends ActionBarActivity {
 			clearRecord
 					.setTitle("Delete Record")
 					.setMessage(
-							"Are you sure you want to delete the record for date: " + date)
+							"Are you sure you want to delete the record for date: "
+									+ date)
 					.setPositiveButton("Yes", new OnClickListener() {
 
 						@Override
 						public void onClick(DialogInterface arg0, int arg1) {
-
-							
 
 							SQLiteDatabase db = dbHelper.getWritableDatabase();
 							db.execSQL("DROP TABLE IF EXISTs " + date);
@@ -245,12 +345,11 @@ public class MainActivity extends ActionBarActivity {
 
 						}
 					});
-			
+
 			AlertDialog alert = clearRecord.create();
 			alert.show();
-			
-			
-			//lvTimeline.setTag(date);
+
+			// lvTimeline.setTag(date);
 
 		}
 
